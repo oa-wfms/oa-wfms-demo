@@ -1,0 +1,5 @@
+.secrets.env
+.vscode/
+__pycache__/
+*.pyc
+venv/
