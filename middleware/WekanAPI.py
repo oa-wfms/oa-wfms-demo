@@ -98,8 +98,23 @@ class WekanAPI:
         # fetch issues and sections from OJS
         ojs_api.getIssuesAndSections()
 
+        # create a default card for the journal itself in the inbox
+        journal_name = os.path.basename(urlparse(os.getenv('OJS_URL')).path).upper()
+        default_journal_card = self.synchronizeCard(
+            board_title=self.board_name,
+            swimlane_title=PRODUCT_GROUP_JOURNALS,
+            list_title=PROCESS_GROUP_INBOX,
+            card_title=journal_name,
+            card_description=f"Zeitschrift {journal_name}",
+            color="blue",
+            title=journal_name,
+            checklist=json.loads(os.getenv('CHECKLIST_TEMPLATE_JOURNAL', {}))
+        )
+
         # loop through all issues and create cards if they don't exist
+        sections = []
         for issue in ojs_api.future_issues.get('items', []):
+            print(f"Found future issue: {issue['identification']}")
             locale = issue.get('locale', 'de_DE')
             issue_number = issue.get('volume', 'No volume number')
             issue_year = issue.get('year', 'No Year')
@@ -115,6 +130,13 @@ class WekanAPI:
                 color="green", title=issue.get('title', 'No Title').get(locale, 'No Title'),
                 checklist=json.loads(os.getenv('CHECKLIST_TEMPLATE_ISSUE', {}))
             )
+
+            # collect sections from the issues
+            sections.extend(issue.get('sections', []))
+            # remove duplicate sections by their id
+            sections = {sec['id']: sec for sec in sections}.values()
+            ojs_api.sections = list(sections)
+        print(f"\033[92mCollected {len(ojs_api.sections)} unique sections from issues.\033[0m")
 
         # fetch OJS submissions and iterate over them
         ojs_api.getActiveSubmissions()
@@ -150,7 +172,7 @@ class WekanAPI:
                 section_name = section.get('title', '')[locale]
             else:
                 section_name = f"Section #{current_publication.get('sectionId', '')}"
-            card_title = f"{section_name} #{submission['id']} {authors}"
+            card_title = f"{journal_name}: {section_name} #{submission['id']} {authors}"
 
             self.synchronizeCard(
                 board_title=self.board_name,
@@ -166,7 +188,9 @@ class WekanAPI:
         # this requires that the issue cards have been created first
         for submission in ojs_api.iterSubmissions():
             current_publication = ojs_api.getCurrentPublication(submission)
+            # print(current_publication) # for debugging
             issue_id = current_publication.get('issueId')
+            print(f"\033[92mProcessing card linking information for submission ID {submission['id']} with current publication issueId = {issue_id}\033[0m")
             if issue_id:
                 issue = next((iss for iss in ojs_api.issues.get('items', []) if iss['id'] == issue_id), None)
                 if issue:
@@ -185,7 +209,7 @@ class WekanAPI:
                         section_name = section.get('title', '')[locale]
                     else:
                         section_name = f"Section #{current_publication.get('sectionId', '')}"
-                    card_title = f"{section_name} #{submission['id']} {authors}"
+                    card_title = f"{journal_name}: {section_name} #{submission['id']} {authors}"
 
                     print(f"\033[92mLinking submission ID {submission['id']} to issue ID {issue_id}\033[0m")
 
@@ -208,6 +232,9 @@ class WekanAPI:
                     issue_card = next((card for card in cards if card['title'] == issue_card_title), None)
                     submission_card = next((card for card in cards if card['title'] == card_title), None)
 
+                    # remove existing links to default journal card from submission card
+                    ## ToDO @ronste: implement removal of existing links if any. First check the problem that OJS returns issueIds even if submissions are not assigned to an issue yet.
+
                     # add parentId to submission card if not already set
                     if issue_card and submission_card:
                         if submission_card.get('parentId') != issue_card.get('_id'):
@@ -219,9 +246,16 @@ class WekanAPI:
                             )
                             if self.DEBUG:
                                 print("Updated card:", json.dumps(updated_card, indent=2))
-                else:
-                    print(f"Submission ID {submission['id']} has no issue assigned.")
 
+                else:
+                    print(f"Submission ID {submission['id']} has no issue assigned, linking to default journal card '{default_journal_card['title']}'.")
+                    # link to default journal card via id provided by default_journal_card
+                    if default_journal_card:
+                        self.call_api(
+                            'post',
+                            f"{self.base_url}/api/boards/{board['_id']}/lists/{submission_card['listId']}/cards/{submission_card['_id']}/links",
+                            json_data={"cardId": default_journal_card['_id']}
+                        )
 
     # simple test function to demonstrate usage
     def test_api(self, data=''):
@@ -356,6 +390,8 @@ class WekanAPI:
                     { "_id": title_field.get('_id'), "value": title }
                 ]}
             )
+
+        return card
 
     def find_board(self, board_title):
         boards = self.call_api('get', f"{self.base_url}/api/users/{self.user_id}/boards")

@@ -45,6 +45,16 @@ Die für den Demonstrator vereinbarte Board-Struktur umfasst die folgenden Eleme
 - Herausforderungen bei mehrsprachigen Metadaten
 - Unterschiedliche Implementierungsansätze für verschiedene OJS-Versionen
 
+### Anmerkungen zur allgemeinen Verfügbarkeit von Informationen aus OJS über API Endpunkte
+
+Allgemein verfolgt PKP den Ansatz die gesamte Backend <-> Frontend Kommunikation über das REST API abzuwickeln. Der Grad der Umsetzung steigt mit jeder neuen OJS-Version. Meine Vermutung ist, dass, abgesehen von Plugins, mit OJS 3.5 die gesamte Kommunikation bereits über das REST API abgewicklet wird.
+
+PKP verfolgt dabei keinen allgemeinen Ansatz alle Information auch systematisch über das REST API verfügbar zu machen. Der Blick von PKP fokussiert sich hier auf Informationen die direkt für das Frontend gebraucht werden.
+
+Ein Beispiel stellen die Rubrikennamen dar. OJS 3.3 stellt keinen API Endpunkt für die direkte Abfrage von Runrikennamen zur Verfügung. Lediglich das Ausgaben-Objekt enthält eine Liste der in dieser Ausgabe verwendeten Rubriken (weil diese sepzielle Auswahl für die Darstellung im Frontend benötigt wird). Falls einer Ausgabe noch keine Artikel zugewiesen wurden gibt es daher auch keine Informationen über Rubrikennamen.
+
+Grundsätzlich stehen daher auch nicht alle möglichen Rubrikennamen nach außen zur Verfügung. Um einen Rubrikennamen zuordnunen zu können, muss mindestens ein Artikel mit dieser Rubrik bereits einer Ausgabe zugeordnet worden sein.
+
 ## Aktueller Projektstand
 
 - Einrichtung einer Wekan-Testinstallation bei externem Dienstleister
