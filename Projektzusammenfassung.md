@@ -55,6 +55,20 @@ Ein Beispiel stellen die Rubrikennamen dar. OJS 3.3 stellt keinen API Endpunkt f
 
 Grundsätzlich stehen daher auch nicht alle möglichen Rubrikennamen nach außen zur Verfügung. Um einen Rubrikennamen zuordnunen zu können, muss mindestens ein Artikel mit dieser Rubrik bereits einer Ausgabe zugeordnet worden sein.
 
+### Diskussion verschiedener Umsetzungsvarianten einer WFMS Middleware
+
+Die aktuelle Implmentation des Demonstrators als Python-Skript platziert die gesamte Buisness-Logik in die Demonstrator-Middleware. Diese Umsetzungsvariante wurde für diese Machbarkeitsstudie aber lediglich aufgrund von parktischen Gesichtspunkten einer möglichst schnellen Umsetzung gewählt. Für eine finale Implementation sollte dieser Design-Ansatz grundsätzlich neu durchdacht werden.
+
+Die überlichen Kriterien für eine robuste Softwarearchitektur (wie z.B. Auswahl der Programmiersprache, Framework-Auswahl, Modularisierung, Wartungsaufwand, ...) solten zugrundegelegt werden.
+
+In diesem Kontext sollte auch berücksichtigt werden, dass für diesen Demonstrator schon relativ viel OJS-Buisness-Logik, welche sich im Laufe der Zeit auch ändern kann und wird, in den Middleware-Demonstrator übertragen wurde. Diese OJS-Buisness-Logik ist notwendig, um die Bezeihungen zwischen den Objekten korrekt synchronisieren zu können.
+
+Ein alternativer Design-Ansatz wäre, diese OJS-Business-Logik in OJS zu belassen, und über ein OJS-Plugin zu implementieren. Ein solches Plugin hat Zugriff auf OJS-Funktionen die bestimmte Daten automatisiert zusammenstellen, die aber nicht über API-Endpunkte verfügbar sind (Beispiel Rubtrikennamen). Das Plugin würde bei diesem Ansatz die kompletten, für die Synchronisation notwendigen Daten über einen selbst definierten API-Endpunkt verfügbar machen. Ein solches Plugin könnte auch zusätztliche Daten, welche nicht über die normalen Endpunkte verfügbar sind, für die oben aufgelisteten neuen Features zur Verfügnung stellen.
+
+Ein weiterer Aspekt ist die Integration anderer Plattformen, z.B. OMP. Im Kontext des Design-Ansatzes des Demonstrators wäre es wiederum nötig plattformspezifische Business-Logik in den Demonstrator zu übertragen. Dieser Ansatz würde den Demostrator-Code mit jeder neuen Plattform weiter aufblähen.
+
+Im Falle einer Architektur die mit plattformspezifischen Plugins arbeitet, wäre die plattformspezifische Business-Logik von der Synchronisationslogik separiert und der Code damit besser wartbar.
+
 ## Aktueller Projektstand
 
 - Einrichtung einer Wekan-Testinstallation bei externem Dienstleister

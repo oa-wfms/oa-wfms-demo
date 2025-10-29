@@ -112,7 +112,7 @@ class WekanAPI:
         )
 
         # loop through all issues and create cards if they don't exist
-        sections = []
+        sections = {}
         for issue in ojs_api.future_issues.get('items', []):
             print(f"Found future issue: {issue['identification']}")
             locale = issue.get('locale', 'de_DE')
@@ -132,10 +132,9 @@ class WekanAPI:
             )
 
             # collect sections from the issues
-            sections.extend(issue.get('sections', []))
-            # remove duplicate sections by their id
-            sections = {sec['id']: sec for sec in sections}.values()
-            ojs_api.sections = list(sections)
+            sections.update({sec['id']: sec for sec in issue.get('sections', [])})
+            # remove duplicate sections by their id (sections is already a dict)
+            ojs_api.sections = list(sections.values())
         print(f"\033[92mCollected {len(ojs_api.sections)} unique sections from issues.\033[0m")
 
         # fetch OJS submissions and iterate over them
