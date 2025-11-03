@@ -99,7 +99,7 @@ class WekanAPI:
         ojs_api.getIssuesAndSections()
 
         # create a default card for the journal itself in the inbox
-        journal_name = os.path.basename(urlparse(os.getenv('OJS_URL')).path).upper()
+        journal_name = self.get_journal_name()
         default_journal_card = self.synchronizeCard(
             board_title=self.board_name,
             swimlane_title=PRODUCT_GROUP_JOURNALS,
@@ -120,7 +120,7 @@ class WekanAPI:
             issue_year = issue.get('year', 'No Year')
             print(f"\033[92mSynchronizing issue ID {issue['id']} with number '{issue_number}' and year '{issue_year}'\033[0m")
 
-            card_title = f"{os.path.basename(urlparse(os.getenv('OJS_URL')).path).upper()} Heft {issue_number} ({issue_year})"
+            card_title = f"{journal_name} Heft {issue_number} ({issue_year})"
             self.synchronizeCard(
                 board_title=self.board_name,
                 swimlane_title=PRODUCT_GROUP_JOURNALS,
@@ -166,12 +166,8 @@ class WekanAPI:
                 list_name = PROCESS_GROUP_INBOX  # default to inbox if unknown
 
             # get section name from OJS sections indexing by current_publication sectionId
-            section = next((sec for sec in ojs_api.sections if sec['id'] == current_publication.get('sectionId')), {})
-            if section:
-                section_name = section.get('title', '')[locale]
-            else:
-                section_name = f"Section #{current_publication.get('sectionId', '')}"
-            card_title = f"{journal_name}: {section_name} #{submission['id']} {authors}"
+            section_name = self.get_section_name(ojs_api, current_publication, locale)
+            card_title = self.get_card_title(journal_name, section_name, submission['id'], authors)
 
             self.synchronizeCard(
                 board_title=self.board_name,
@@ -185,6 +181,23 @@ class WekanAPI:
 
         # if the publications issueId is set, find the corresponding issue and set the cards parentId to the issue card
         # this requires that the issue cards have been created first
+        
+        # find the board and swimlane once for all linking operations
+        boards = self.call_api('get', f"{self.base_url}/api/users/{self.user_id}/boards")
+        board = next((b for b in boards if b['title'] == self.board_name), None)
+        if not board:
+            print(f"\033[91mBoard '{self.board_name}' not found.\033[0m")
+            return
+
+        swimlanes = self.call_api('get', f"{self.base_url}/api/boards/{board['_id']}/swimlanes")
+        swimlane = next((sl for sl in swimlanes if sl['title'] == PRODUCT_GROUP_JOURNALS), None)
+        if not swimlane:
+            print(f"\033[91mSwimlane '{PRODUCT_GROUP_JOURNALS}' not found.\033[0m")
+            return
+
+        # get all cards in the swimlane once
+        cards = self.call_api('get', f"{self.base_url}/api/boards/{board['_id']}/swimlanes/{swimlane['_id']}/cards")
+
         for submission in ojs_api.iterSubmissions():
             current_publication = ojs_api.getCurrentPublication(submission)
             # print(current_publication) # for debugging
@@ -196,38 +209,19 @@ class WekanAPI:
                     locale = issue.get('locale', 'de_DE')
                     issue_number = issue.get('volume', 'No volume number')
                     issue_year = issue.get('year', 'No Year')
-                    issue_card_title = f"{os.path.basename(urlparse(os.getenv('OJS_URL')).path).upper()} Heft {issue_number} ({issue_year})"
+                    issue_card_title = f"{journal_name} Heft {issue_number} ({issue_year})"
                     submission_locale = submission.get('locale')
                     current_publication = ojs_api.getCurrentPublication(submission)
                     title = current_publication.get('fullTitle', 'No Title')[submission_locale]
                     authors = current_publication.get('authorsStringShort', "No Authors")
 
                     # get section name from OJS sections indexing by current_publication sectionId
-                    section = next((sec for sec in ojs_api.sections if sec['id'] == current_publication.get('sectionId')), {})
-                    if section:
-                        section_name = section.get('title', '')[locale]
-                    else:
-                        section_name = f"Section #{current_publication.get('sectionId', '')}"
-                    card_title = f"{journal_name}: {section_name} #{submission['id']} {authors}"
+                    section_name = self.get_section_name(ojs_api, current_publication, locale)
+                    card_title = self.get_card_title(journal_name, section_name, submission['id'], authors)
 
                     print(f"\033[92mLinking submission ID {submission['id']} to issue ID {issue_id}\033[0m")
 
-                    # find the board by title
-                    boards = self.call_api('get', f"{self.base_url}/api/users/{self.user_id}/boards")
-                    board = next((b for b in boards if b['title'] == self.board_name), None)
-                    if not board:
-                        print(f"Board '{self.board_name}' not found.")
-                        return
-
-                    # get all cards in the current swimlane
-                    swimlanes = self.call_api('get', f"{self.base_url}/api/boards/{board['_id']}/swimlanes")
-                    swimlane = next((sl for sl in swimlanes if sl['title'] == PRODUCT_GROUP_JOURNALS), None)
-                    if not swimlane:
-                        print(f"Swimlane '{PRODUCT_GROUP_JOURNALS}' not found.")
-                        return
-
                     # find issue card and submission card by title
-                    cards = self.call_api('get', f"{self.base_url}/api/boards/{board['_id']}/swimlanes/{swimlane['_id']}/cards")
                     issue_card = next((card for card in cards if card['title'] == issue_card_title), None)
                     submission_card = next((card for card in cards if card['title'] == card_title), None)
 
@@ -245,15 +239,22 @@ class WekanAPI:
                             )
                             if self.DEBUG:
                                 print("Updated card:", json.dumps(updated_card, indent=2))
-
-                else:
-                    print(f"Submission ID {submission['id']} has no issue assigned, linking to default journal card '{default_journal_card['title']}'.")
-                    # link to default journal card via id provided by default_journal_card
-                    if default_journal_card:
+            else:
+                print(f"Submission ID {submission['id']} has no issue assigned, linking to default journal card '{default_journal_card['title']}'.")
+                # link to default journal card via id provided by default_journal_card
+                if default_journal_card:
+                    card_title = self.get_card_title(
+                        journal_name,
+                        self.get_section_name(ojs_api, ojs_api.getCurrentPublication(submission), submission.get('locale')),
+                        submission['id'],
+                        ojs_api.getCurrentPublication(submission).get('authorsStringShort', "No Authors")
+                    )
+                    submission_card = next((card for card in cards if card['title'] == card_title), None)
+                    if submission_card:
                         self.call_api(
-                            'post',
-                            f"{self.base_url}/api/boards/{board['_id']}/lists/{submission_card['listId']}/cards/{submission_card['_id']}/links",
-                            json_data={"cardId": default_journal_card['_id']}
+                            'put',
+                            f"{self.base_url}/api/boards/{board['_id']}/lists/{submission_card['listId']}/cards/{submission_card['_id']}",
+                            json_data={"parentId": default_journal_card['_id']}
                         )
 
     # simple test function to demonstrate usage
@@ -274,7 +275,7 @@ class WekanAPI:
             if self.DEBUG:
                 print("Board details:", json.dumps(board_details, indent=2))
         else:
-            print(f"Board '{self.board_name}' not found.")
+            print(f"\033[91mBoard '{self.board_name}' not found.\033[0m")
             exit(1)
 
         # GET swimlanes of the board
@@ -299,17 +300,17 @@ class WekanAPI:
     def synchronizeCard(self, board_title, swimlane_title, list_title, card_title, title, card_description, card_id=None, color=None, checklist=None):        
         board = self.find_board(board_title)
         if not board:
-            print(f"Board '{board_title}' not found.")
+            print(f"\033[91mBoard '{board_title}' not found.\033[0m")
             return
 
         swimlane = self.find_swimlane(board['_id'], swimlane_title)
         if not swimlane:
-            print(f"Swimlane '{swimlane_title}' not found in board '{board_title}'.")
+            print(f"\033[91mSwimlane '{swimlane_title}' not found in board '{board_title}'.\033[0m")
             return
 
         target_list = self.find_list(board['_id'], list_title)
         if not target_list:
-            print(f"List '{list_title}' not found in board '{board_title}'.")
+            print(f"\033[91mList '{list_title}' not found in board '{board_title}'.\033[0m")
             return
 
         # Get all cards in the swimlane
@@ -376,21 +377,60 @@ class WekanAPI:
         if not title_field:
             # get all custom fields of the board
             board_custom_fields = self.call_api('get', f"{self.base_url}/api/boards/{board['_id']}/custom-fields")
-            title_field = next((cf for cf in board_custom_fields if cf.get('name') == 'Titel'), None)
-            # update card with new custom field Title
-            print(f"Custom field 'Title' not found. Creating it...")
+            title_field = next((cf for cf in board_custom_fields if cf.get('name') == 'Title'), None)
+            # create new custom field Title if it doesn't exist
+            if not title_field:
+                print(f"\033[91mCustom field 'Title' not found. Creating it...\033[0m")
+                title_field = self.call_api(
+                    'post',
+                    f"{self.base_url}/api/boards/{board['_id']}/custom-fields",
+                    json_data={
+                        "name": "Title",
+                        "type": "text",
+                        "settings": "",
+                        "showOnCard": True,
+                        "automaticallyOnCard": False,
+                        "alwaysOnCard": "true",
+                        "showLabelOnMiniCard": True,
+                        "showSumAtTopOfList": False
+                    }
+                )
+                if self.DEBUG:
+                    print("Created custom field 'Title':", json.dumps(title_field, indent=2))
         
         # update custom field Title with the provided title
         if title_field:
+            # Handle both dict and string responses from API
+            field_id = title_field.get('_id') if isinstance(title_field, dict) else title_field
             self.call_api(
                 'put',
                 f"{self.base_url}/api/boards/{board['_id']}/lists/{target_list['_id']}/cards/{card['_id']}",
                 json_data={"customFields": [
-                    { "_id": title_field.get('_id'), "value": title }
+                    { "_id": field_id, "value": title }
                 ]}
             )
 
-        return card
+        # return card updated card details
+        return self.call_api('get', f"{self.base_url}/api/boards/{board['_id']}/lists/{target_list['_id']}/cards/{card['_id']}")
+
+    def get_journal_name(self):
+        """Extract journal name from OJS URL"""
+        return os.path.basename(urlparse(os.getenv('OJS_URL')).path).upper()
+
+    def get_card_title(self, journal_name, section_name, submission_id, authors):
+        """Generate card title for submissions"""
+        return f"{journal_name}: {section_name} #{submission_id} {authors}"
+
+    def get_section_name(self, ojs_api, current_publication, locale):
+        """Get section name from OJS sections indexing by current_publication sectionId"""
+        section = next((sec for sec in ojs_api.sections if sec['id'] == current_publication.get('sectionId')), {})
+        if section:
+            return section.get('title', '')[locale]
+        else:
+            if os.getenv('DEFAULT_SECTION_NAME') == '':
+                return f"Section #{current_publication.get('sectionId', '')}"
+            else:
+                return f"{os.getenv('DEFAULT_SECTION_NAME', 'Section')}"
 
     def find_board(self, board_title):
         boards = self.call_api('get', f"{self.base_url}/api/users/{self.user_id}/boards")

@@ -1,6 +1,9 @@
 # oa-wfms
 Demo code for a workflow management solution for open access publishers
 
+Version 1.0
+Date: 3.11.2025
+
 ## Resources
 
 - Wekan API reference: https://wekan.fi/api/v7.93/#wekan-rest-api
