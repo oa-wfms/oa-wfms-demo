@@ -387,10 +387,10 @@ class WekanAPI:
                     json_data={
                         "name": "Title",
                         "type": "text",
-                        "settings": "",
-                        "showOnCard": True,
-                        "automaticallyOnCard": False,
-                        "alwaysOnCard": "true",
+                        "settings": {},
+                        "showOnCard": False,
+                        "automaticallyOnCard": True,
+                        "alwaysOnCard": True,
                         "showLabelOnMiniCard": True,
                         "showSumAtTopOfList": False
                     }
