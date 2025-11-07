@@ -2,7 +2,7 @@
 Demo code for a workflow management solution for open access publishers
 
 Version 1.0
-Date: 3.11.2025
+Date: 7.11.2025
 
 ## Resources
 
@@ -129,7 +129,10 @@ CHECKLIST_TEMPLATE_SUBMISSION = '{"title": "Demo Submission Checklist", "items":
 
 1) For each journal a default card is created in the inbox list
 2) A card is created in the inbox list for each future issue (published issues are not synchronized)
-3) Section names are retrieved from each issue (the API does not provide an endpoint to directly fetch section information). If section information is found the title will be displayed on the respective cards, if not "Section #XX" will be used as default fallback.
+3) Section names are retrieved from issue data, as the API does not provide an endpoint to directly fetch section information. If section information is found the title will be displayed on the respective cards, if not the text provided in the `.env` variable `DEFAULT_SECTION_NAME` will be used.
+
+***Important***: OJS only provides section information with published issues. To be able to see valid section labels in Wekan a published issue must exists that uses the respectve section.
+
 4) A card is created for each submission and assigned to the lists as defined in `.env`
 5) Submission cards are linked to issue cards if an issue ID exists. Otherwise they are linked to the default journal card.
   "ATTENTION: As of today, 26.10.2025 OJS reports issue IDs for all existing submissions. That is why they are falsely linked to the only exiting future issue. This behaviour is still under investigation."
@@ -138,10 +141,10 @@ CHECKLIST_TEMPLATE_SUBMISSION = '{"title": "Demo Submission Checklist", "items":
 
 - [x] Dokumentation für Account-Einrichtung hinzufügen
 - [ ] Weitere Checklisten-Vorlagen implemetieren -> Warten auf Rückmeldung
-- [ ] Artikel / Ausgaben Zuordnung überprüfen: OJS meldet für alle derzeitigen Artikel eine Ausgaben-ID. Im OJS Backend ist (bei den Potsdamer Zeitschriften) das Tab "Ausgabe" nicht zu sehen -> das sollte nicht der Fall sein. Ausgaben können eigentlich immer zugewiesen werden -> Problem untersuchen.
+- [x] Artikel / Ausgaben Zuordnung überprüfen: OJS meldet für alle derzeitigen Artikel eine Ausgaben-ID. Im OJS Backend ist (bei den Potsdamer Zeitschriften) das Tab "Ausgabe" nicht zu sehen -> das sollte nicht der Fall sein. Ausgaben können eigentlich immer zugewiesen werden -> Problem untersuchen.
 - [x] Zeitschriftenname in Artielkartentitel aufnehmen
 - [x] Fallback Heft-Karte erstellen für alle Einreichungen die noch keine zugewiesene Ausagbe haben
-- [ ] Link zur Fallback Karte aktualisieren wenn Issue-Zuweisung erfolgt ist -> erst klären warum OJS issueIds liefert selbst wenn es keine Zuordnung gibt  
+- [x] Link zur Fallback Karte aktualisieren wenn Issue-Zuweisung erfolgt ist -> erst klären warum OJS issueIds liefert selbst wenn es keine Zuordnung gibt  
 - [x] Section #35 durch Klarnamen ersetzen: War schon im Code enthalten, aber: Klarnamen der Rubriken können nur über ein issue-Objekt abgefragt werden, d.h. das die Ausgabe muss zunächst Artikel zugewiesen bekommen haben. Der Text "Section" ist lediglich der Default-Fallback.
 - [x] Diskussion welche Funktionen OJS über das API zu Verfügung stellen könnte und welche nicht
 

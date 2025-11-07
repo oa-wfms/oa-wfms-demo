@@ -209,7 +209,7 @@ class WekanAPI:
                     locale = issue.get('locale', 'de_DE')
                     issue_number = issue.get('volume', 'No volume number')
                     issue_year = issue.get('year', 'No Year')
-                    issue_card_title = f"{journal_name} Heft {issue_number} ({issue_year})"
+                    issue_card_title = f"{journal_name} Bd. {issue_number} ({issue_year})"
                     submission_locale = submission.get('locale')
                     current_publication = ojs_api.getCurrentPublication(submission)
                     title = current_publication.get('fullTitle', 'No Title')[submission_locale]
