@@ -120,13 +120,13 @@ class WekanAPI:
             issue_year = issue.get('year', 'No Year')
             print(f"\033[92mSynchronizing issue ID {issue['id']} with number '{issue_number}' and year '{issue_year}'\033[0m")
 
-            card_title = f"{journal_name} Heft {issue_number} ({issue_year})"
+            card_title = f"{journal_name} {os.getenv('DEFAULT_ISSUE_NAME', 'Heft')} {issue_number} ({issue_year})"
             self.synchronizeCard(
                 board_title=self.board_name,
                 swimlane_title=PRODUCT_GROUP_JOURNALS,
                 list_title=PROCESS_GROUP_INBOX,
                 card_title=card_title,
-                card_description=f"Heft {issue_number} ({issue_year})",
+                card_description=f"{os.getenv('DEFAULT_ISSUE_NAME', 'Heft')} {issue_number} ({issue_year})",
                 color="green", title=issue.get('title', 'No Title').get(locale, 'No Title'),
                 checklist=json.loads(os.getenv('CHECKLIST_TEMPLATE_ISSUE', {}))
             )
@@ -203,7 +203,7 @@ class WekanAPI:
                     locale = issue.get('locale', 'de_DE')
                     issue_number = issue.get('volume', 'No volume number')
                     issue_year = issue.get('year', 'No Year')
-                    issue_card_title = f"{journal_name} Bd. {issue_number} ({issue_year})"
+                    issue_card_title = f"{journal_name} {os.getenv('DEFAULT_ISSUE_NAME', 'Heft')} {issue_number} ({issue_year})"
                     submission_locale = submission.get('locale')
                     current_publication = ojs_api.getCurrentPublication(submission)
                     title = current_publication.get('fullTitle', 'No Title')[submission_locale]
