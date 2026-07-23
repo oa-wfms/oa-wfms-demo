@@ -29,7 +29,7 @@ Die für den Demonstrator vereinbarte Board-Struktur umfasst die folgenden Eleme
 - **Teilaufgaben**: Einzelartikel als Unteraufgaben mit Verlinkung zur Hauptkarte der Zeitschriftenausgabe
 - **Template-System**: Vorlagen für verschiedene Publikationstypen mit spezifischen Checklisten, konfigurierbar über .env-Datei
 
-## Gewünschte zukünftuge erweiterte Funktionalitäten 
+## Gewünschte zukünftige erweiterte Funktionalitäten 
 
 - **Checklisten-Management**: Automatisches Kopieren von Vorlagen bei Kartenerstellung
 - **Bidirektionale Kommunikation**: Möglichkeiten für Wekan→OJS-Aktionen
